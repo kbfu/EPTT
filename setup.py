@@ -13,9 +13,9 @@ setup(name='ept',
       classifiers=[
           'Programming Language :: Python :: 3.6.2',
       ],
-      packages=['ept.core', 'ept.db', 'ept'],
+      packages=['ept.core', 'ept'],
       package_dir={'': 'src'},
       install_requires=REQUIREMENTS,
-      scripts=['bin/test'],
+      scripts=['bin/ept_run'],
       include_package_data=True
       )

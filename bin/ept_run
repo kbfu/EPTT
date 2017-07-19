@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
-from ept.db.db import DbModel
-DbModel().create_db()
 from multiprocessing import Pool
-import aiohttp
-import uvloop
 import asyncio
-from ept.core import date_util
-from ept.db.log import Log
 import json
+import os
+import uvloop
+from ept.core import csv_processor
+import aiohttp
+from ept.core import date_util
 
 
 async def async_send():
@@ -20,15 +19,19 @@ async def async_send():
                 end_time = date_util.timestamp_now()
                 elapsed_time = end_time - start_time
                 try:
-                    Log().add('test', resp_text, json.dumps(dict(resp.headers)), elapsed_time,
-                              start_time, end_time, resp.status)
+                    csv_processor.write('log.csv', 'test', resp_text,
+                                        json.dumps(dict(resp.headers)),
+                                        resp.status, elapsed_time,
+                                        start_time, end_time, '')
                 except Exception as e:
                     print(e)
         except Exception as e:
             end_time = date_util.timestamp_now()
             elapsed_time = end_time - start_time
-            Log().add('test', resp_text, json.dumps(dict(resp.headers)), elapsed_time,
-                      start_time, end_time, resp.status, e)
+            csv_processor.write('log.csv', 'test', resp_text,
+                                json.dumps(dict(resp.headers)),
+                                resp.status, elapsed_time,
+                                start_time, end_time, e)
 
 
 def run(n):
@@ -41,6 +44,10 @@ def run(n):
 
 
 if __name__ == '__main__':
+    try:
+        os.remove('log.csv')
+    except FileNotFoundError:
+        pass
     with Pool(processes=2) as pool:
         results = [pool.apply_async(run, (16, )) for _ in range(250)]
         for r in results:
