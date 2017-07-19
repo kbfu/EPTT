@@ -1,9 +1,14 @@
+#!/usr/bin/env python
+# coding=utf-8
+from ept.db.db import DbModel
+DbModel().create_db()
 from multiprocessing import Pool
 import aiohttp
 import uvloop
 import asyncio
 from ept.core import date_util
 from ept.db.log import Log
+import json
 
 
 async def async_send():
@@ -14,12 +19,15 @@ async def async_send():
                 resp_text = await resp.text()
                 end_time = date_util.timestamp_now()
                 elapsed_time = end_time - start_time
-                Log().add('test', resp_text, resp.headers, elapsed_time,
-                          start_time, end_time, resp.status)
+                try:
+                    Log().add('test', resp_text, json.dumps(dict(resp.headers)), elapsed_time,
+                              start_time, end_time, resp.status)
+                except Exception as e:
+                    print(e)
         except Exception as e:
             end_time = date_util.timestamp_now()
             elapsed_time = end_time - start_time
-            Log().add('test', resp_text, resp.headers, elapsed_time,
+            Log().add('test', resp_text, json.dumps(dict(resp.headers)), elapsed_time,
                       start_time, end_time, resp.status, e)
 
 

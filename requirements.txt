@@ -1,2 +1,5 @@
 aiohttp
 uvloop
+cchardet
+aiodns
+sqlalchemy
