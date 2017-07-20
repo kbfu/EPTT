@@ -3,7 +3,6 @@
 from multiprocessing import Pool
 import asyncio
 import json
-import os
 import uvloop
 from ept.core import csv_processor
 import aiohttp
@@ -44,11 +43,11 @@ def run(n):
 
 
 if __name__ == '__main__':
-    try:
-        os.remove('log.csv')
-    except FileNotFoundError:
-        pass
+    csv_processor.remove('log.csv')
+    csv_processor.create('log.csv')
+    start_time = date_util.timestamp_now()
     with Pool(processes=2) as pool:
         results = [pool.apply_async(run, (16, )) for _ in range(250)]
         for r in results:
             r.wait()
+    print(date_util.timestamp_now() - start_time)
