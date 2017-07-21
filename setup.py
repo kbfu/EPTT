@@ -8,12 +8,12 @@ with open(join(CURDIR, 'requirements.txt')) as f:
     REQUIREMENTS = f.read().splitlines()
 
 setup(name='ept',
-      version='1.0.2',
+      version='1.0.0',
       description='ept',
       classifiers=[
           'Programming Language :: Python :: 3.6.2',
       ],
-      packages=['ept.core', 'ept'],
+      packages=['ept.core', 'ept', 'ept.util'],
       package_dir={'': 'src'},
       install_requires=REQUIREMENTS,
       scripts=['bin/ept_run'],

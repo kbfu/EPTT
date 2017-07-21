@@ -2,42 +2,18 @@
 # coding=utf-8
 from multiprocessing import Pool
 import asyncio
-import json
+import importlib
+
 import uvloop
-from ept.core import csv_processor
-import aiohttp
-from ept.core import date_util
+from ept.core import csv_processor, date_util
 
 
-async def async_send():
-    start_time = date_util.timestamp_now()
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.get('http://127.0.0.1:60001/get') as resp:
-                resp_text = await resp.text()
-                end_time = date_util.timestamp_now()
-                elapsed_time = end_time - start_time
-                try:
-                    csv_processor.write('log.csv', 'test', resp_text,
-                                        json.dumps(dict(resp.headers)),
-                                        resp.status, elapsed_time,
-                                        start_time, end_time, '')
-                except Exception as e:
-                    print(e)
-        except Exception as e:
-            end_time = date_util.timestamp_now()
-            elapsed_time = end_time - start_time
-            csv_processor.write('log.csv', 'test', resp_text,
-                                json.dumps(dict(resp.headers)),
-                                resp.status, elapsed_time,
-                                start_time, end_time, e)
-
-
-def run(n):
+def run(n, module_name, func, *args, **kwargs):
+    module = importlib.import_module(module_name, '.')
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.gather(
-        *[async_send() for _ in range(n)]
+        *[getattr(module, func)(*args, **kwargs) for _ in range(n)]
     ))
     loop.close()
 
@@ -47,7 +23,8 @@ if __name__ == '__main__':
     csv_processor.create('log.csv')
     start_time = date_util.timestamp_now()
     with Pool(processes=2) as pool:
-        results = [pool.apply_async(run, (16, )) for _ in range(250)]
+        results = [pool.apply_async(
+            run, (16, 'http', 'get', 'http://127.0.0.1:60001/get', 'test')) for _ in range(250)]
         for r in results:
             r.wait()
     print(date_util.timestamp_now() - start_time)
