@@ -13,7 +13,7 @@ setup(name='ept',
       classifiers=[
           'Programming Language :: Python :: 3.6.2',
       ],
-      packages=['ept.core', 'ept', 'ept.util'],
+      packages=['ept.core', 'ept', 'ept.util', 'ept.plugins'],
       package_dir={'': 'src'},
       install_requires=REQUIREMENTS,
       scripts=['bin/ept_run'],

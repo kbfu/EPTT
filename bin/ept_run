@@ -5,26 +5,33 @@ import asyncio
 import importlib
 
 import uvloop
-from ept.core import csv_processor, date_util
+from ept.util import csv_util, date_util
 
 
-def run(n, module_name, func, *args, **kwargs):
-    module = importlib.import_module(module_name, '.')
+def _task(parallel_tasks, module_name, func, args, kwargs):
+    module = importlib.import_module('ept.core.' + module_name)
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.gather(
-        *[getattr(module, func)(*args, **kwargs) for _ in range(n)]
+        *[getattr(module, func)(args, kwargs)
+          for _ in range(parallel_tasks)]
     ))
     loop.close()
 
 
-if __name__ == '__main__':
-    csv_processor.remove('log.csv')
-    csv_processor.create('log.csv')
-    start_time = date_util.timestamp_now()
-    with Pool(processes=2) as pool:
-        results = [pool.apply_async(
-            run, (16, 'http', 'get', 'http://127.0.0.1:60001/get', 'test')) for _ in range(250)]
+def run(parallel_tasks, module_name, func, processes, for_loop,
+        *args, **kwargs):
+    with Pool(processes=int(processes)) as pool:
+        results = [pool.apply_async(_task, (parallel_tasks, module_name, func,
+                                            args, kwargs))
+                   for _ in range(int(for_loop))]
         for r in results:
             r.wait()
+
+
+if __name__ == '__main__':
+    csv_util.remove('log.csv')
+    csv_util.create('log.csv')
+    start_time = date_util.timestamp_now()
+    run(16, 'http', 'get', 2, 250, 'http://localhost:60001/get', 'test')
     print(date_util.timestamp_now() - start_time)
