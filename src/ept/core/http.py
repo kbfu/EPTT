@@ -1,6 +1,5 @@
 # coding=utf-8
 import json
-
 import aiohttp
 from aiohttp.connector import TCPConnector
 from ..util import csv_util, date_util

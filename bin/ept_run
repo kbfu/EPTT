@@ -3,7 +3,6 @@
 from multiprocessing import Pool
 import asyncio
 import importlib
-
 import uvloop
 from ept.util import csv_util, date_util
 
@@ -33,5 +32,5 @@ if __name__ == '__main__':
     csv_util.remove('log.csv')
     csv_util.create('log.csv')
     start_time = date_util.timestamp_now()
-    run(16, 'http', 'get', 2, 250, 'http://localhost:60001/get', 'test')
+    run(16, 'http', 'get', 4, 250, 'http://127.0.0.1:60001/get', 'test')
     print(date_util.timestamp_now() - start_time)
