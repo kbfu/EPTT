@@ -14,11 +14,12 @@ async def get(args, verify_ssl=False):
                 resp_text = await resp.text()
                 end = date_util.timestamp_now()
                 elapsed = end - start
-                csv_util.write('log.csv', args[1], resp_text,
-                               json.dumps(dict(resp.headers)),
-                               resp.status, elapsed,
-                               start, end, '')
+                # csv_util.write('log.csv', args[1], resp_text,
+                #                json.dumps(dict(resp.headers)),
+                #                resp.status, elapsed,
+                #                start, end, '')
         except Exception as e:
+            print(e)
             end = date_util.timestamp_now()
             elapsed = end - start
             csv_util.write('log.csv', args[1], '',
