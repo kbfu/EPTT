@@ -5,7 +5,7 @@ from aiohttp.connector import TCPConnector
 from ..util import csv_util, date_util
 
 
-async def get(args, verify_ssl=False):
+async def get(log_manager, args, verify_ssl=False):
     start = date_util.timestamp_now()
     async with aiohttp.ClientSession(
             connector=TCPConnector(verify_ssl=verify_ssl)) as session:
@@ -14,15 +14,20 @@ async def get(args, verify_ssl=False):
                 resp_text = await resp.text()
                 end = date_util.timestamp_now()
                 elapsed = end - start
+                log_manager.update({'name': args[1], 'resp': resp_text,
+                                    'headers': json.dumps(dict(resp.headers)),
+                                    'status': resp.status, 'elapsed': elapsed,
+                                    'start': start, 'end': end,
+                                    'exception': ''})
                 # csv_util.write('log.csv', args[1], resp_text,
                 #                json.dumps(dict(resp.headers)),
                 #                resp.status, elapsed,
                 #                start, end, '')
         except Exception as e:
-            print(e)
             end = date_util.timestamp_now()
             elapsed = end - start
-            csv_util.write('log.csv', args[1], '',
-                           json.dumps(dict(resp.headers)),
-                           resp.status, elapsed,
-                           start, end, e)
+            # csv_util.write('log.csv', args[1], '',
+            #                json.dumps(dict(resp.headers)),
+            #                resp.status, elapsed,
+            #                start, end, e)
+            print(e)

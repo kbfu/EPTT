@@ -1,36 +1,64 @@
-#!/usr/bin/env python
+#!/Users/zhangdonghao/ept/venv/bin/python
 # coding=utf-8
 from multiprocessing import Pool
+from multiprocessing.managers import BaseManager
 import asyncio
 import importlib
 import uvloop
 from ept.util import csv_util, date_util
 
 
-def _task(parallel_tasks, module_name, func, args, kwargs):
+class LogManager(object):
+    def __init__(self):
+        self.log_dict = []
+
+    def update(self, new_dict):
+        self.log_dict.append(new_dict)
+
+    def log(self):
+        return self.log_dict
+
+
+class CustomManager(BaseManager):
+    pass
+
+
+CustomManager.register('Log', LogManager)
+
+
+def _task(parallel_tasks, module_name, func, log_manager, args, kwargs):
     module = importlib.import_module('ept.core.' + module_name)
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.gather(
-        *[getattr(module, func)(args, kwargs)
+        *[getattr(module, func)(log_manager, args, kwargs)
           for _ in range(parallel_tasks)]
     ))
     loop.close()
 
 
-def run(parallel_tasks, module_name, func, processes, for_loop,
+def run(parallel_tasks, module_name, func, processes, for_loop, log_manager,
         *args, **kwargs):
     with Pool(processes=int(processes)) as pool:
         results = [pool.apply_async(_task, (parallel_tasks, module_name, func,
-                                            args, kwargs))
+                                            log_manager, args, kwargs))
                    for _ in range(int(for_loop))]
         for r in results:
             r.wait()
 
 
-if __name__ == '__main__':
+def main():
     csv_util.remove('log.csv')
     csv_util.create('log.csv')
+    manager = CustomManager()
+    manager.start()
+    log_manager = manager.Log()
     start_time = date_util.timestamp_now()
-    run(400, 'http', 'get', 8, 10, 'http://127.0.0.1:60001/get', 'test')
+    run(16, 'http', 'get', 4, 250, log_manager,
+        'http://127.0.0.1:60001/get', 'test')
     print(date_util.timestamp_now() - start_time)
+    print(len(log_manager.log()))
+
+
+if __name__ == '__main__':
+    main()
