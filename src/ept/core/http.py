@@ -23,11 +23,11 @@ async def get(log_manager, args, verify_ssl=False):
                                     'status': resp.status, 'elapsed': elapsed,
                                     'start': start, 'end': end,
                                     'exception': ''})
-        except Exception as e:
+        except Exception as exc:
             end = date_util.timestamp_now()
             elapsed = end - start
             log_manager.update({'name': args[1], 'resp': '',
                                 'headers': json.dumps(dict(resp.headers)),
                                 'status': resp.status, 'elapsed': elapsed,
                                 'start': start, 'end': end,
-                                'exception': e})
+                                'exception': exc})
