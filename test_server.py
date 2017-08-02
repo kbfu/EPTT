@@ -1,4 +1,3 @@
-# coding=utf-8
 from flask import Flask, jsonify
 
 app = Flask(__name__)

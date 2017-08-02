@@ -1,5 +1,5 @@
 aiohttp
-uvloop
 cchardet
 aiodns
 pyyaml
+ujson

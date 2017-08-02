@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-# coding=utf-8
 from multiprocessing import Pool
 from multiprocessing.managers import BaseManager
 import asyncio
 import importlib
-import uvloop
 from ept.util import csv_util, date_util
+from aiohttp import ClientSession
+from aiohttp.connector import TCPConnector
 
 
 class LogManager(object):
@@ -26,22 +26,31 @@ class CustomManager(BaseManager):
 CustomManager.register('Log', LogManager)
 
 
-def _task(parallel_tasks, module_name, func, log_manager, args, kwargs):
+async def _task(sems, tasks, module_name, func, log_manager, args,
+                verify_ssl=False):
     module = importlib.import_module('ept.core.' + module_name)
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    sem = asyncio.Semaphore(sems)
+    async with ClientSession(connector=TCPConnector(verify_ssl=verify_ssl))\
+            as session:
+        resps = asyncio.gather(
+            *[asyncio.ensure_future(getattr(module, func)(sem, session,
+                                                          log_manager, args))
+              for _ in range(tasks)])
+        await resps
+
+
+def _run(sems, tasks, module_name, func, log_manager, args):
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.gather(
-        *[getattr(module, func)(log_manager, args, kwargs)
-          for _ in range(parallel_tasks)]
-    ))
-    loop.close()
+    future = asyncio.ensure_future(
+        _task(sems, tasks, module_name, func, log_manager, args))
+    loop.run_until_complete(future)
 
 
-def run(parallel_tasks, module_name, func, processes, for_loop, log_manager,
-        *args, **kwargs):
+def run(sems, tasks, module_name, func, processes, for_loop, log_manager,
+        *args):
     with Pool(processes=int(processes)) as pool:
-        results = [pool.apply_async(_task, (parallel_tasks, module_name, func,
-                                            log_manager, args, kwargs))
+        results = [pool.apply_async(_run, (sems, tasks, module_name, func,
+                                           log_manager, args))
                    for _ in range(int(for_loop))]
         for r in results:
             r.wait()
@@ -54,7 +63,7 @@ def main():
     manager.start()
     log_manager = manager.Log()
     start_time = date_util.timestamp_now()
-    run(16, 'http', 'get', 4, 250, log_manager,
+    run(200, 1000, 'http', 'get', 4, 4, log_manager,
         'http://127.0.0.1:60001/get', 'test')
     print(date_util.timestamp_now() - start_time)
     print(len(log_manager.log()))
