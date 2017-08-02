@@ -1,4 +1,4 @@
-#!/Users/zhangdonghao/ept/venv/bin/python
+#!/usr/bin/env python
 # coding=utf-8
 from multiprocessing import Pool
 from multiprocessing.managers import BaseManager
