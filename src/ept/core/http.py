@@ -14,7 +14,7 @@ async def get(sem, session, log_manager, args):
                 resp_text = await resp.text()
                 end = date_util.timestamp_now()
                 elapsed = end - start
-                log_manager.append({'name': args[1], 'resp': resp_text,
+                log_manager.update({'name': args[1], 'resp': resp_text,
                                     'headers': json.dumps(dict(resp.headers)),
                                     'status': resp.status, 'elapsed': elapsed,
                                     'start': start, 'end': end,
@@ -22,7 +22,7 @@ async def get(sem, session, log_manager, args):
     except Exception as exc:
         end = date_util.timestamp_now()
         elapsed = end - start
-        log_manager.append({'name': args[1], 'resp': '',
+        log_manager.update({'name': args[1], 'resp': '',
                             'headers': json.dumps(dict(resp.headers)),
                             'status': resp.status, 'elapsed': elapsed,
                             'start': start, 'end': end,
