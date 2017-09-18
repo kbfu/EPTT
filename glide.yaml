@@ -1,0 +1,6 @@
+package: pegasus
+import:
+- package: github.com/valyala/fasthttp
+- package: github.com/klauspost/compress
+  subpackages:
+  - flate

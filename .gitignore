@@ -1,6 +1,2 @@
-.vscode
-venv
-__pycache__
-log.csv
-access.log
-error.log
+.idea
+vendor
