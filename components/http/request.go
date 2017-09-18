@@ -11,9 +11,9 @@ type RequestData struct {
 	ResponseChannel chan map[string]interface{}
 	Client          *fasthttp.Client
 	Url             string
-	Headers         []map[string]string
-	PathParams      []string
-	QueryParams     map[string]string
+	Headers         map[interface{}]interface{}
+	PathParams      []interface{}
+	QueryParams     map[interface{}]interface{}
 	Body            []byte
 }
 
@@ -26,10 +26,8 @@ func (r *RequestData) Request() (*RequestData, fasthttp.Request) {
 	var headers fasthttp.RequestHeader
 	var url string
 	if r.Headers != nil {
-		for _, v := range r.Headers {
-			for k := range v {
-				headers.Add(k, v[k])
-			}
+		for k, v := range r.Headers {
+			headers.Add(k.(string), v.(string))
 		}
 		request.Header = headers
 	}

@@ -4,3 +4,4 @@ import:
 - package: github.com/klauspost/compress
   subpackages:
   - flate
+- package: github.com/go-yaml/yaml
