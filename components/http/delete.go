@@ -2,9 +2,9 @@ package http
 
 import (
 	"github.com/valyala/fasthttp"
-	"log"
 	"math"
 	"time"
+	"github.com/kbfu/pegasus/utils"
 )
 
 func DoDelete(r Requester) {
@@ -16,9 +16,7 @@ func DoDelete(r Requester) {
 		data := make(map[string]interface{})
 		startTime := time.Now().UnixNano()
 		err := requestData.Client.Do(&request, &response)
-		if err != nil {
-			log.Fatal(err)
-		}
+		utils.Check(err)
 		elapsedTime := float64(time.Now().UnixNano()-startTime) / math.Pow10(9)
 		data["statusCode"], data["body"], data["elapsed"], data["startTime"] = response.StatusCode(),
 			response.Body(), elapsedTime, float64(startTime) / math.Pow10(9)
