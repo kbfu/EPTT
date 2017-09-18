@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"git.jiayincloud.com/TestDev/pegasus.git/components/http"
+	"github.com/kbfu/pegasus/components/http"
 	"github.com/valyala/fasthttp"
 	"math"
 	"time"

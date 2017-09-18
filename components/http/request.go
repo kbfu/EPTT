@@ -2,7 +2,7 @@ package http
 
 import (
 	"fmt"
-	"git.jiayincloud.com/TestDev/pegasus.git/utils"
+	"github.com/kbfu/pegasus/utils"
 	"github.com/valyala/fasthttp"
 )
 
