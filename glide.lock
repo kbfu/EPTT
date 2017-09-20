@@ -1,21 +1,6 @@
-hash: a662635425c869d7716ebd52e3c4c6f377ba14b9a1ddde8b6b06c85cd100fc55
-updated: 2017-09-18T17:37:51.331357923+08:00
+hash: 9d28d50ad06a7d56b7f4be8fa2d5e5043a27232cc3c2dfa79d613048446619dc
+updated: 2017-09-21T00:40:27.146616873+08:00
 imports:
 - name: github.com/go-yaml/yaml
   version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
-- name: github.com/klauspost/compress
-  version: f3dce52e0576655d55fd69e74b63da96ad1108f3
-  subpackages:
-  - flate
-  - gzip
-  - zlib
-- name: github.com/klauspost/cpuid
-  version: ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da
-- name: github.com/valyala/bytebufferpool
-  version: e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7
-- name: github.com/valyala/fasthttp
-  version: 5116aa64e038d917b3916a74da456c00643ff1e6
-  subpackages:
-  - fasthttputil
-  - stackless
 testImports: []

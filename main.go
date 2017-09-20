@@ -2,33 +2,37 @@ package main
 
 import (
 	"fmt"
-	"github.com/go-yaml/yaml"
-	"github.com/kbfu/pegasus/components/http"
-	"github.com/kbfu/pegasus/utils"
-	"github.com/valyala/fasthttp"
+	"github.com/kbfu/pegasus/core"
+	pegasusHttp "github.com/kbfu/pegasus/components/http"
 	"io/ioutil"
-	"math"
-	"strings"
-	"time"
+	"github.com/go-yaml/yaml"
+	"github.com/kbfu/pegasus/utils"
 )
 
-var responseChannel = make(chan map[string]interface{}, 200)
-var yamlFile map[string]interface{}
-
 func main() {
+	var yamlFile map[string]interface{}
 	file, _ := ioutil.ReadFile("test.yaml")
 	err := yaml.Unmarshal(file, &yamlFile)
 	utils.Check(err)
 	requests := yamlFile["requests"]
+
 	for _, request := range requests.([]interface{}) {
-		var body []byte
-		var queryParams map[interface{}]interface{}
-		var pathParams []interface{}
+		var (
+			body []byte
+			queryParams map[interface{}]interface{}
+			pathParams []interface{}
+			headers map[interface{}]interface{}
+			file map[interface{}]interface{}
+			form map[interface{}]interface{}
+		)
 		url := request.(map[interface{}]interface{})["url"].(string)
-		loop := request.(map[interface{}]interface{})["loop"].(int)
+		workers := request.(map[interface{}]interface{})["workers"].(int)
+		duration := request.(map[interface{}]interface{})["duration"].(int)
+		rate := request.(map[interface{}]interface{})["rate"].(int)
 		method := request.(map[interface{}]interface{})["method"].(string)
-		goroutineCount := request.(map[interface{}]interface{})["goroutine"].(int)
-		headers := request.(map[interface{}]interface{})["headers"].(map[interface{}]interface{})
+		if request.(map[interface{}]interface{})["headers"] != nil {
+			headers = request.(map[interface{}]interface{})["headers"].(map[interface{}]interface{})
+		}
 		if request.(map[interface{}]interface{})["queryParams"] != nil {
 			queryParams = request.(map[interface{}]interface{})["queryParams"].(map[interface{}]interface{})
 		}
@@ -38,92 +42,34 @@ func main() {
 		if request.(map[interface{}]interface{})["pathParams"] != nil {
 			pathParams = request.(map[interface{}]interface{})["pathParams"].([]interface{})
 		}
+		if request.(map[interface{}]interface{})["file"] != nil {
+			file = request.(map[interface{}]interface{})["file"].(map[interface{}]interface{})
+		}
+		if request.(map[interface{}]interface{})["form"] != nil {
+			form = request.(map[interface{}]interface{})["form"].(map[interface{}]interface{})
+		}
 
-		switch strings.ToLower(method) {
-		case "post":
-			r := &http.RequestData{
-				Loop:            loop,
-				ResponseChannel: responseChannel,
-				Client:          &fasthttp.Client{},
-				Url:             url,
-				Headers:         headers,
-				QueryParams:     queryParams,
-				Body:            body,
-				PathParams:      pathParams,
-			}
-			startTime := time.Now().UnixNano()
-			for i := 0; i < goroutineCount; i++ {
-				go http.DoPost(r)
-			}
-			for i := 0; i < loop*goroutineCount; i++ {
-				data := <-responseChannel
-				fmt.Println(data["statusCode"])
-			}
-			endTime := time.Now().UnixNano()
-			fmt.Println(float64(endTime-startTime) / math.Pow10(9))
-		case "get":
-			r := &http.RequestData{
-				Loop:            loop,
-				ResponseChannel: responseChannel,
-				Client:          &fasthttp.Client{},
-				Url:             url,
-				Headers:         headers,
-				QueryParams:     queryParams,
-				Body:            body,
-				PathParams:      pathParams,
-			}
-			startTime := time.Now().UnixNano()
-			for i := 0; i < goroutineCount; i++ {
-				go http.DoGet(r)
-			}
-			for i := 0; i < loop*goroutineCount; i++ {
-				data := <-responseChannel
-				fmt.Println(data["statusCode"])
-			}
-			endTime := time.Now().UnixNano()
-			fmt.Println(float64(endTime-startTime) / math.Pow10(9))
-		case "put":
-			r := &http.RequestData{
-				Loop:            loop,
-				ResponseChannel: responseChannel,
-				Client:          &fasthttp.Client{},
-				Url:             url,
-				Headers:         headers,
-				QueryParams:     queryParams,
-				Body:            body,
-				PathParams:      pathParams,
-			}
-			startTime := time.Now().UnixNano()
-			for i := 0; i < goroutineCount; i++ {
-				go http.DoPut(r)
-			}
-			for i := 0; i < loop*goroutineCount; i++ {
-				data := <-responseChannel
-				fmt.Println(data["statusCode"])
-			}
-			endTime := time.Now().UnixNano()
-			fmt.Println(float64(endTime-startTime) / math.Pow10(9))
-		case "delete":
-			r := &http.RequestData{
-				Loop:            loop,
-				ResponseChannel: responseChannel,
-				Client:          &fasthttp.Client{},
-				Url:             url,
-				Headers:         headers,
-				QueryParams:     queryParams,
-				Body:            body,
-				PathParams:      pathParams,
-			}
-			startTime := time.Now().UnixNano()
-			for i := 0; i < goroutineCount; i++ {
-				go http.DoDelete(r)
-			}
-			for i := 0; i < loop*goroutineCount; i++ {
-				data := <-responseChannel
-				fmt.Println(data["statusCode"])
-			}
-			endTime := time.Now().UnixNano()
-			fmt.Println(float64(endTime-startTime) / math.Pow10(9))
+		tasks := duration * rate
+		jobs := make(chan func(), workers)
+		results := make(chan map[string]interface{}, tasks)
+
+		r := pegasusHttp.RequestData{
+			Client: *core.Client(),
+			Url:    url,
+			Method: method,
+			Body: body,
+			QueryParams: queryParams,
+			PathParams: pathParams,
+			Headers: headers,
+			File: file,
+			Form: form,
+		}
+
+		core.InitWorkerPool(jobs, rate, workers)
+		core.InitJobs(tasks, jobs, &r, results)
+
+		for a := 0; a < tasks; a++ {
+			fmt.Println(<-results)
 		}
 	}
 }

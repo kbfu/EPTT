@@ -1,52 +1,103 @@
 package http
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"math"
+	"mime/multipart"
+	"net/http"
+	"os"
 	"github.com/kbfu/pegasus/utils"
-	"github.com/valyala/fasthttp"
+	"time"
 )
 
 type RequestData struct {
-	Loop            int
-	ResponseChannel chan map[string]interface{}
-	Client          *fasthttp.Client
-	Url             string
-	Headers         map[interface{}]interface{}
-	PathParams      []interface{}
-	QueryParams     map[interface{}]interface{}
-	Body            []byte
+	Url    string
+	Method string
+	// Content-Type will be auto reset if Form or File has values
+	Headers map[interface{}]interface{}
+	// Body should be nil if Form or File has values
+	Body        []byte
+	QueryParams map[interface{}]interface{}
+	PathParams  []interface{}
+	Client      http.Client
+	File        map[interface{}]interface{}
+	Form        map[interface{}]interface{}
 }
 
-type Requester interface {
-	Request() (*RequestData, fasthttp.Request)
-}
-
-func (r *RequestData) Request() (*RequestData, fasthttp.Request) {
-	request := fasthttp.AcquireRequest()
-	var headers fasthttp.RequestHeader
+func (r *RequestData) Request(results chan map[string]interface{}) {
 	var url string
-	if r.Headers != nil {
-		for k, v := range r.Headers {
-			headers.Add(k.(string), v.(string))
-		}
-		request.Header = headers
-	}
+	var err error
+	var req *http.Request
+
 	if r.PathParams != nil {
 		url = fmt.Sprintf(r.Url, utils.UnpackString(r.PathParams)...)
-	}
-	if r.QueryParams != nil {
-		params := ""
-		for k, v := range r.QueryParams {
-			params = params + fmt.Sprintf("%s=%s&", k, v)
-		}
-		url = url + "?" + params[:len(params)-1]
-	}
-	if url == "" {
+	} else {
 		url = r.Url
 	}
-	request.SetRequestURI(url)
-	if r.Body != nil {
-		request.SetBody(r.Body)
+
+	if r.Form != nil || r.File != nil {
+		body, contentType := multipartForm(r.File, r.Form)
+		req, err = http.NewRequest(r.Method, url, bytes.NewBuffer(body.Bytes()))
+		q := req.URL.Query()
+		utils.Check(err)
+		req.TransferEncoding = []string{"UTF-8"}
+		for k, v := range r.Headers {
+			req.Header.Add(k.(string), v.(string))
+		}
+		for k, v := range r.QueryParams {
+			q.Add(k.(string), v.(string))
+		}
+		req.URL.RawQuery = q.Encode()
+		req.Header.Add("Content-Type", contentType)
+	} else {
+		req, err = http.NewRequest(r.Method, url, bytes.NewBuffer(r.Body))
+		q := req.URL.Query()
+		utils.Check(err)
+		req.TransferEncoding = []string{"UTF-8"}
+		for k, v := range r.Headers {
+			req.Header.Add(k.(string), v.(string))
+		}
+		for k, v := range r.QueryParams {
+			q.Add(k.(string), v.(string))
+		}
+		req.URL.RawQuery = q.Encode()
 	}
-	return r, *request
+	startTime := time.Now().UnixNano()
+	resp, err := r.Client.Do(req)
+	elapsedTime := float64(time.Now().UnixNano()-startTime) / math.Pow10(9)
+	defer resp.Body.Close()
+	data := make(map[string]interface{})
+	body, err := ioutil.ReadAll(resp.Body)
+	utils.Check(err)
+	data["statusCode"], data["body"], data["elapsed"], data["startTime"], data["error"] = resp.StatusCode,
+		body, elapsedTime, float64(startTime)/math.Pow10(9), err
+	results <- data
+}
+
+func multipartForm(file map[interface{}]interface{}, form map[interface{}]interface{}) (body bytes.Buffer, contentType string) {
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	// add form file
+	for k, v := range file {
+		f, err := os.Open(v.(string))
+		utils.Check(err)
+		fw, err := w.CreateFormFile(k.(string), v.(string))
+		utils.Check(err)
+		_, err = io.Copy(fw, f)
+		f.Close()
+		utils.Check(err)
+	}
+	// add form data
+	for k, v := range form {
+		fw, err := w.CreateFormField(k.(string))
+		utils.Check(err)
+		_, err = fw.Write([]byte(v.(string)))
+		utils.Check(err)
+	}
+	w.Close()
+
+	return b, w.FormDataContentType()
 }
