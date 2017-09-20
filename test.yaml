@@ -1,0 +1,24 @@
+requests:
+#  - testPost:
+#    url: http://localhost:60005/hello
+#    method: POST
+#    goroutine: 500
+#    loop: 8
+
+  - testGet:
+    url: http://localhost:60005/hello
+    method: GET
+    workers: 10
+    duration: 10
+    rate: 1000
+#    body: this is a body
+#    queryParams:
+#      test: 123
+#    pathParams:
+#      - abcdefg
+#    file:
+#      file: test
+#    form:
+#      testForm: test
+#    headers:
+#      content: ddte
