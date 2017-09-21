@@ -12,7 +12,7 @@ func InitWorkerPool(jobs chan func(), rate int, workers int) {
 }
 
 func worker(jobs chan func(), rate int, workers int) {
-	limiter := time.Tick(time.Second / time.Duration(rate/workers))
+	limiter := time.Tick(time.Duration(float64(time.Second) / float64(rate)/float64(workers)))
 	for j := range jobs {
 		<-limiter
 		go j()
@@ -22,7 +22,7 @@ func worker(jobs chan func(), rate int, workers int) {
 func InitJobs(tasks int, jobs chan func(), r *httpPegasus.RequestData, results chan map[string]interface{}) {
 	for j := 0; j < tasks; j++ {
 		jobs <- func() {
-			r.Request(results)
+			r.Request(*Client, results)
 		}
 	}
 }

@@ -5,7 +5,9 @@ import (
 	"net/http"
 )
 
-func Client() *http.Client {
+var Client = client()
+
+func client() *http.Client {
 	tr := &http.Transport{
 		MaxIdleConns:       1000,
 		MaxIdleConnsPerHost: 1000,
