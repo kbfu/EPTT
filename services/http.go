@@ -6,6 +6,9 @@ import (
 	pegasusHttp "github.com/kbfu/pegasus/components/http"
 	"github.com/kbfu/pegasus/core"
 	"net/http"
+	"sort"
+	"github.com/kbfu/pegasus/utils"
+	"math"
 )
 
 var ammos = []pegasusHttp.RequestData{}
@@ -79,10 +82,47 @@ func Fire(c *gin.Context) {
 		core.InitWorkerPool(jobs, workers)
 		core.InitJobs(tasks, rate, jobs, &r, results)
 
-		for a := 0; a < tasks; a++ {
-			<-results
-			//fmt.Println(<-results)
+		var elapsed []int
+		var endTimes []int
+		total := 0
+		tps := make(map[int]int)
+		for i := 0; i < tasks; i++ {
+			result := <-results
+			elapsed = append(elapsed, result["elapsed"].(int))
+			endTimes = append(endTimes, result["endTime"].(int))
 		}
+		sort.Ints(elapsed)
+		elapsedTotal := len(elapsed)
+		ninety := elapsed[utils.Round(float64(elapsedTotal) * 0.9 - 1.0)]
+		ninetyFive := elapsed[utils.Round(float64(elapsedTotal) * 0.95 - 1)]
+		ninetyNine := elapsed[utils.Round(float64(elapsedTotal) * 0.99 - 1)]
+		median := elapsed[utils.Round(float64(elapsedTotal) * 0.5 - 1)]
+		min := elapsed[0]
+		max := elapsed[elapsedTotal-1]
+		for _, respTime := range elapsed {
+			total += respTime
+		}
+		average := total/elapsedTotal
+		for _, endTime := range endTimes {
+			endTimeSecond := endTime/int(math.Pow10(3))
+			if tps[endTimeSecond] == 0 {
+				tps[endTimeSecond] = 1
+			} else {
+				tps[endTimeSecond] += 1
+			}
+		}
+
+		report := Report{
+			Average: average,
+			Median: median,
+			Min: min,
+			Max: max,
+			NinetyPercent: ninety,
+			NinetyFivePercent: ninetyFive,
+			NinetyNinePercent: ninetyNine,
+			Tps: tps,
+		}
+		c.JSON(http.StatusOK, report)
 	}
 
 }

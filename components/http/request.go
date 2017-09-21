@@ -68,9 +68,9 @@ func (r *RequestData) Request(client http.Client, results chan map[string]interf
 		req.URL.RawQuery = q.Encode()
 	}
 
-	startTime := time.Now().UnixNano() / int64(math.Pow10(6))
+	startTime := int(time.Now().UnixNano() / int64(math.Pow10(6)))
 	resp, err := client.Do(req)
-	endTime := time.Now().UnixNano() / int64(math.Pow10(6))
+	endTime := int(time.Now().UnixNano() / int64(math.Pow10(6)))
 	defer resp.Body.Close()
 	data := make(map[string]interface{})
 	body, err := ioutil.ReadAll(resp.Body)
