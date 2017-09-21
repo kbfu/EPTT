@@ -3,13 +3,13 @@ package http
 import (
 	"bytes"
 	"fmt"
+	"github.com/kbfu/pegasus/utils"
 	"io"
 	"io/ioutil"
 	"math"
 	"mime/multipart"
 	"net/http"
 	"os"
-	"github.com/kbfu/pegasus/utils"
 	"time"
 )
 
@@ -25,6 +25,7 @@ type RequestData struct {
 	Client      http.Client
 	File        map[interface{}]interface{}
 	Form        map[interface{}]interface{}
+	Name        string
 }
 
 func (r *RequestData) Request(results chan map[string]interface{}) {
@@ -72,8 +73,12 @@ func (r *RequestData) Request(results chan map[string]interface{}) {
 	data := make(map[string]interface{})
 	body, err := ioutil.ReadAll(resp.Body)
 	utils.Check(err)
-	data["statusCode"], data["body"], data["elapsed"], data["startTime"], data["error"] = resp.StatusCode,
-		body, elapsedTime, float64(startTime)/math.Pow10(9), err
+	data["statusCode"] = resp.StatusCode
+	data["body"] = body
+	data["elapsed"] = elapsedTime
+	data["startTime"] = startTime
+	data["error"] = err
+	data["name"] = r.Name
 	results <- data
 }
 

@@ -6,11 +6,11 @@ requests:
 #    loop: 8
 
   - testGet:
-    url: http://localhost:60005/hello
-    method: GET
-    workers: 10
-    duration: 10
-    rate: 1000
+      url: http://localhost:60005/hello
+      method: GET
+      workers: 10
+      duration: 10
+      rate: 1000
 #    body: this is a body
 #    queryParams:
 #      test: 123
