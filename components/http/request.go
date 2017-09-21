@@ -76,7 +76,7 @@ func (r *RequestData) Request(client http.Client, results chan map[string]interf
 	body, err := ioutil.ReadAll(resp.Body)
 	utils.Check(err)
 	data["statusCode"] = resp.StatusCode
-	data["body"] = body
+	data["body"] = string(body[:])
 	data["endTime"] = endTime
 	data["startTime"] = startTime
 	data["error"] = err

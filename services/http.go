@@ -80,7 +80,7 @@ func Fire(c *gin.Context) {
 		core.InitJobs(tasks, rate, jobs, &r, results)
 
 		for a := 0; a < tasks; a++ {
-			<-results
+			c.JSON(http.StatusOK, <-results)
 			//fmt.Println(<-results)
 		}
 	}
