@@ -12,9 +12,10 @@ func InitWorkerPool(jobs chan func(), rate int, workers int) {
 }
 
 func worker(jobs chan func(), rate int, workers int) {
+	limiter := time.Tick(time.Second / time.Duration(rate/workers))
 	for j := range jobs {
+		<-limiter
 		go j()
-		time.Sleep(time.Second / time.Duration(rate/workers))
 	}
 }
 
