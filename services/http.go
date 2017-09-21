@@ -8,65 +8,77 @@ import (
 	"fmt"
 )
 
-func Overload(c *gin.Context)  {
+var ammos = []pegasusHttp.RequestData{}
+
+func Load(c *gin.Context)  {
 	var data pegasusHttp.RequestData
 	err := c.BindJSON(&data)
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("%s", err))
 		return
 	}
-			var (
-				body        string
-				queryParams map[string]string
-				pathParams  []string
-				headers     map[string]string
-				file        map[string]string
-				form        map[string]string
-			)
-			url := data.Url
-			workers := data.Workers
-			duration := data.Duration
-			rate := data.Rate
-			method := data.Method
-			if data.Headers != nil {
-				headers = data.Headers
-			}
-			if data.QueryParams != nil {
-				queryParams = data.QueryParams
-			}
-			if data.Body != "" {
-				body = data.Body
-			}
-			if data.PathParams != nil {
-				pathParams = data.PathParams
-			}
-			if data.File != nil {
-				file = data.File
-			}
-			if data.Form != nil {
-				form = data.Form
-			}
+	ammos = append(ammos, data)
+}
 
-			tasks := duration * rate
-			jobs := make(chan func(), workers)
-			results := make(chan map[string]interface{}, tasks)
+func Fire(c *gin.Context)  {
+	defer func() {
+		ammos = ammos[:0]
+	}()
+	for _, v := range ammos {
+		var (
+			body        string
+			queryParams map[string]string
+			pathParams  []string
+			headers     map[string]string
+			file        map[string]string
+			form        map[string]string
+		)
+		url := v.Url
+		workers := v.Workers
+		duration := v.Duration
+		rate := v.Rate
+		method := v.Method
+		if v.Headers != nil {
+			headers = v.Headers
+		}
+		if v.QueryParams != nil {
+			queryParams = v.QueryParams
+		}
+		if v.Body != "" {
+			body = v.Body
+		}
+		if v.PathParams != nil {
+			pathParams = v.PathParams
+		}
+		if v.File != nil {
+			file = v.File
+		}
+		if v.Form != nil {
+			form = v.Form
+		}
 
-			r := pegasusHttp.RequestData{
-				Url:         url,
-				Method:      method,
-				Body:        body,
-				QueryParams: queryParams,
-				PathParams:  pathParams,
-				Headers:     headers,
-				File:        file,
-				Form:        form,
-			}
+		tasks := duration * rate
+		jobs := make(chan func(), workers)
+		results := make(chan map[string]interface{}, tasks)
 
-			core.InitWorkerPool(jobs, workers)
-			core.InitJobs(tasks, rate, jobs, &r, results)
+		r := pegasusHttp.RequestData{
+			Url:         url,
+			Method:      method,
+			Body:        body,
+			QueryParams: queryParams,
+			PathParams:  pathParams,
+			Headers:     headers,
+			File:        file,
+			Form:        form,
+		}
 
-			for a := 0; a < tasks; a++ {
-				<-results
-				//fmt.Println(<-results)
+		core.InitWorkerPool(jobs, workers)
+		core.InitJobs(tasks, rate, jobs, &r, results)
+
+		for a := 0; a < tasks; a++ {
+			<-results
+			//fmt.Println(<-results)
+		}
 	}
+
 }

@@ -12,6 +12,9 @@ func init() {
 
 func main() {
 	httpGroup := core.Router.Group("/http")
-	httpGroup.POST("/overload", services.Overload)
+	{
+		httpGroup.POST("/load", services.Load)
+		httpGroup.POST("/fire", services.Fire)
+	}
 	core.Router.Run(":60006")
 }
