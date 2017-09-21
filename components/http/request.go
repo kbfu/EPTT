@@ -80,6 +80,7 @@ func (r *RequestData) Request(client http.Client, results chan map[string]interf
 	data["endTime"] = endTime
 	data["startTime"] = startTime
 	data["error"] = err
+	data["elapsed"] = endTime - startTime
 	results <- data
 }
 
