@@ -62,8 +62,8 @@ func Overload(c *gin.Context)  {
 				Form:        form,
 			}
 
-			core.InitWorkerPool(jobs, rate, workers)
-			core.InitJobs(tasks, jobs, &r, results)
+			core.InitWorkerPool(jobs, workers)
+			core.InitJobs(tasks, rate, jobs, &r, results)
 
 			for a := 0; a < tasks; a++ {
 				<-results

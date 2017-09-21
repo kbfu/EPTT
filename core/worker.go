@@ -5,22 +5,22 @@ import (
 	"time"
 )
 
-func InitWorkerPool(jobs chan func(), rate int, workers int) {
+func InitWorkerPool(jobs chan func(), workers int) {
 	for w := 0; w < workers; w++ {
-		go worker(jobs, rate, workers)
+		go worker(jobs)
 	}
 }
 
-func worker(jobs chan func(), rate int, workers int) {
-	limiter := time.Tick(time.Duration(float64(time.Second) / float64(rate)/float64(workers)))
+func worker(jobs chan func()) {
 	for j := range jobs {
-		<-limiter
 		go j()
 	}
 }
 
-func InitJobs(tasks int, jobs chan func(), r *httpPegasus.RequestData, results chan map[string]interface{}) {
+func InitJobs(tasks int, rate int, jobs chan func(), r *httpPegasus.RequestData, results chan map[string]interface{}) {
+	limiter := time.Tick(time.Duration(float64(time.Second) / float64(rate)))
 	for j := 0; j < tasks; j++ {
+		<-limiter
 		jobs <- func() {
 			r.Request(*Client, results)
 		}
