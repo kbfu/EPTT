@@ -1,16 +1,16 @@
 package services
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/kbfu/pegasus/core"
-	pegasusHttp "github.com/kbfu/pegasus/components/http"
-	"net/http"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	pegasusHttp "github.com/kbfu/pegasus/components/http"
+	"github.com/kbfu/pegasus/core"
+	"net/http"
 )
 
 var ammos = []pegasusHttp.RequestData{}
 
-func Load(c *gin.Context)  {
+func Load(c *gin.Context) {
 	var data pegasusHttp.RequestData
 	err := c.BindJSON(&data)
 	if err != nil {
@@ -20,10 +20,14 @@ func Load(c *gin.Context)  {
 	ammos = append(ammos, data)
 }
 
-func Fire(c *gin.Context)  {
+func Fire(c *gin.Context) {
 	defer func() {
 		ammos = ammos[:0]
 	}()
+	if len(ammos) == 0 {
+		c.String(http.StatusNotFound, "Need to load first")
+		return
+	}
 	for _, v := range ammos {
 		var (
 			body        string
