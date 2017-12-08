@@ -2,127 +2,99 @@ package services
 
 import (
 	"fmt"
+	pegasusHttp "git.jiayincloud.com/TestDev/pegasus.git/components/http"
+	"git.jiayincloud.com/TestDev/pegasus.git/core"
 	"github.com/gin-gonic/gin"
-	pegasusHttp "github.com/kbfu/pegasus/components/http"
-	"github.com/kbfu/pegasus/core"
+	"math"
 	"net/http"
 	"sort"
-	"github.com/kbfu/pegasus/utils"
-	"math"
+	"strconv"
+	"sync"
 )
 
-var ammos = []pegasusHttp.RequestData{}
+type AmmoDepot struct {
+	Ammos []pegasusHttp.RequestData
+	Sync  sync.Mutex
+}
+
+var ammos AmmoDepot
 
 func Load(c *gin.Context) {
-	var data pegasusHttp.RequestData
+	var data []pegasusHttp.RequestData
 	err := c.BindJSON(&data)
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("%s", err))
 		return
 	}
-	ammos = append(ammos, data)
+	ammos.Sync.Lock()
+	for _, v := range data {
+		ammos.Ammos = append(ammos.Ammos, v)
+	}
+	ammos.Sync.Unlock()
+	c.String(http.StatusOK, "Lock & Load")
+}
+
+func GetAmmos(c *gin.Context) {
+	c.String(http.StatusOK, strconv.Itoa(len(ammos.Ammos)))
+}
+
+func DropAmmos(c *gin.Context) {
+	ammos.Ammos = ammos.Ammos[:0]
+	c.String(http.StatusOK, "Cleared")
 }
 
 func Fire(c *gin.Context) {
+	workers, _ := strconv.Atoi(c.Query("workers"))
+	rate, _ := strconv.Atoi(c.Query("rate"))
 	defer func() {
-		ammos = ammos[:0]
+		ammos.Ammos = ammos.Ammos[:0]
 	}()
-	if len(ammos) == 0 {
+	if len(ammos.Ammos) == 0 {
 		c.String(http.StatusNotFound, "Need to load first")
 		return
 	}
-	for _, v := range ammos {
-		var (
-			body        string
-			queryParams map[string]string
-			pathParams  []string
-			headers     map[string]string
-			file        map[string]string
-			form        map[string]string
-		)
-		url := v.Url
-		workers := v.Workers
-		duration := v.Duration
-		rate := v.Rate
-		method := v.Method
-		if v.Headers != nil {
-			headers = v.Headers
-		}
-		if v.QueryParams != nil {
-			queryParams = v.QueryParams
-		}
-		if v.Body != "" {
-			body = v.Body
-		}
-		if v.PathParams != nil {
-			pathParams = v.PathParams
-		}
-		if v.File != nil {
-			file = v.File
-		}
-		if v.Form != nil {
-			form = v.Form
-		}
+	jobs := make(chan func(), workers)
+	results := make(chan map[string]interface{}, len(ammos.Ammos))
 
-		tasks := duration * rate
-		jobs := make(chan func(), workers)
-		results := make(chan map[string]interface{}, tasks)
+	core.InitWorkerPool(jobs, workers)
+	core.InitJobs(rate, jobs, ammos.Ammos, results)
 
-		r := pegasusHttp.RequestData{
-			Url:         url,
-			Method:      method,
-			Body:        body,
-			QueryParams: queryParams,
-			PathParams:  pathParams,
-			Headers:     headers,
-			File:        file,
-			Form:        form,
+	var elapsed []int
+	var endTimes []int
+	var statuses []int
+	total := 0
+	tps := make(map[int]int)
+	status := make(map[int]int)
+	for i := 0; i < len(ammos.Ammos); i++ {
+		result := <-results
+		elapsed = append(elapsed, result["elapsed"].(int))
+		endTimes = append(endTimes, result["endTime"].(int))
+		statuses = append(statuses, result["statusCode"].(int))
+	}
+	sort.Ints(elapsed)
+	for _, respTime := range elapsed {
+		total += respTime
+	}
+	for _, endTime := range endTimes {
+		endTimeSecond := endTime / int(math.Pow10(3))
+		if tps[endTimeSecond] == 0 {
+			tps[endTimeSecond] = 1
+		} else {
+			tps[endTimeSecond] += 1
 		}
-
-		core.InitWorkerPool(jobs, workers)
-		core.InitJobs(tasks, rate, jobs, &r, results)
-
-		var elapsed []int
-		var endTimes []int
-		total := 0
-		tps := make(map[int]int)
-		for i := 0; i < tasks; i++ {
-			result := <-results
-			elapsed = append(elapsed, result["elapsed"].(int))
-			endTimes = append(endTimes, result["endTime"].(int))
+	}
+	for _, v := range statuses {
+		if status[v] == 0 {
+			status[v] = 1
+		} else {
+			status[v] += 1
 		}
-		sort.Ints(elapsed)
-		elapsedTotal := len(elapsed)
-		ninety := elapsed[utils.Round(float64(elapsedTotal) * 0.9 - 1.0)]
-		ninetyFive := elapsed[utils.Round(float64(elapsedTotal) * 0.95 - 1)]
-		ninetyNine := elapsed[utils.Round(float64(elapsedTotal) * 0.99 - 1)]
-		median := elapsed[utils.Round(float64(elapsedTotal) * 0.5 - 1)]
-		min := elapsed[0]
-		max := elapsed[elapsedTotal-1]
-		for _, respTime := range elapsed {
-			total += respTime
-		}
-		average := total/elapsedTotal
-		for _, endTime := range endTimes {
-			endTimeSecond := endTime/int(math.Pow10(3))
-			if tps[endTimeSecond] == 0 {
-				tps[endTimeSecond] = 1
-			} else {
-				tps[endTimeSecond] += 1
-			}
-		}
-
-		report := Report{
-			Average: average,
-			Median: median,
-			Min: min,
-			Max: max,
-			NinetyPercent: ninety,
-			NinetyFivePercent: ninetyFive,
-			NinetyNinePercent: ninetyNine,
-			Tps: tps,
-		}
-		c.JSON(http.StatusOK, report)
 	}
 
+	report := Report{
+		All:    elapsed,
+		Tps:    tps,
+		Status: status,
+	}
+	c.JSON(http.StatusOK, report)
 }

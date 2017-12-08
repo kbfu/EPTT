@@ -1,12 +1,7 @@
 package services
 
 type Report struct {
-	Average           int
-	Median            int
-	Min               int
-	Max               int
-	NinetyPercent     int
-	NinetyFivePercent int
-	NinetyNinePercent int
-	Tps               map[int]int
+	All    []int
+	Tps    map[int]int
+	Status map[int]int
 }

@@ -3,7 +3,7 @@ package http
 import (
 	"bytes"
 	"fmt"
-	"github.com/kbfu/pegasus/utils"
+	"git.jiayincloud.com/TestDev/pegasus.git/utils"
 	"io"
 	"io/ioutil"
 	"math"
@@ -24,15 +24,16 @@ type RequestData struct {
 	PathParams  []string
 	File        map[string]string
 	Form        map[string]string
-	Workers		int
-	Duration	int
-	Rate		int
 }
 
 func (r *RequestData) Request(client http.Client, results chan map[string]interface{}) {
-	var url string
-	var err error
-	var req *http.Request
+	var (
+		url        string
+		err        error
+		req        *http.Request
+		body       []byte
+		statusCode int
+	)
 
 	if r.PathParams != nil {
 		url = fmt.Sprintf(r.Url, utils.UnpackString(r.PathParams)...)
@@ -70,12 +71,17 @@ func (r *RequestData) Request(client http.Client, results chan map[string]interf
 
 	startTime := int(time.Now().UnixNano() / int64(math.Pow10(6)))
 	resp, err := client.Do(req)
+	if err != nil {
+		utils.Check(err)
+	} else {
+		statusCode = resp.StatusCode
+		body, err = ioutil.ReadAll(resp.Body)
+		utils.Check(err)
+		defer resp.Body.Close()
+	}
 	endTime := int(time.Now().UnixNano() / int64(math.Pow10(6)))
-	defer resp.Body.Close()
 	data := make(map[string]interface{})
-	body, err := ioutil.ReadAll(resp.Body)
-	utils.Check(err)
-	data["statusCode"] = resp.StatusCode
+	data["statusCode"] = statusCode
 	data["body"] = string(body[:])
 	data["endTime"] = endTime
 	data["startTime"] = startTime

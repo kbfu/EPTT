@@ -1,7 +1,7 @@
 package core
 
 import (
-	httpPegasus "github.com/kbfu/pegasus/components/http"
+	httpPegasus "git.jiayincloud.com/TestDev/pegasus.git/components/http"
 	"time"
 )
 
@@ -17,12 +17,13 @@ func worker(jobs chan func()) {
 	}
 }
 
-func InitJobs(tasks int, rate int, jobs chan func(), r *httpPegasus.RequestData, results chan map[string]interface{}) {
+func InitJobs(rate int, jobs chan func(), r []httpPegasus.RequestData, results chan map[string]interface{}) {
 	limiter := time.Tick(time.Duration(float64(time.Second) / float64(rate)))
-	for j := 0; j < tasks; j++ {
+	for _, v := range r {
+		task := v
 		<-limiter
 		jobs <- func() {
-			r.Request(*Client, results)
+			task.Request(*Client, results)
 		}
 	}
 }
